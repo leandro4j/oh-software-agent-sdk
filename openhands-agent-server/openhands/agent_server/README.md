@@ -43,6 +43,45 @@ uv run python -m openhands.agent_server --reload
 - `--port`: Port to bind to (default: `8000`)
 - `--reload`: Enable auto-reload
 
+## Frozen full-image contract
+
+`scripts/agent_box_mvp_acceptance.py` is an opt-in, no-LLM contract driver for
+the frozen full image. It creates one disposable Sandbox Server runtime and
+checks session-key HTTP/WebSocket access, chat events, terminal, files, Git,
+and the full image's VS Code base path. It requires the Sandbox Server to
+report the expected local image tag as `sandbox_spec_id`, records the local
+image content ID, requests Sandbox Server cleanup, and removes its direct
+verification container before returning.
+
+Build and load the image locally with the frozen metadata; `--load` keeps the
+image local and avoids any registry publication:
+
+```bash
+docker buildx build \
+  --file openhands-agent-server/openhands/agent_server/docker/Dockerfile \
+  --target binary \
+  --load \
+  --tag agent-box/agent-box-mvp-run-id-software-agent-sdk:local \
+  --build-arg OPENHANDS_BUILD_GIT_SHA=704cbe6015e3d59cabe04632175d99df2d448999 \
+  --build-arg OPENHANDS_BUILD_GIT_REF=704cbe6015e3d59cabe04632175d99df2d448999 \
+  .
+docker image inspect --format '{{.Id}}' \
+  agent-box/agent-box-mvp-run-id-software-agent-sdk:local
+```
+
+The product integration runner supplies these environment variables:
+
+```bash
+AGENT_BOX_MVP_SANDBOX_SERVER_URL=http://127.0.0.1:43000 \
+AGENT_BOX_CONTROL_PLANE_KEY="$AGENT_BOX_CONTROL_PLANE_KEY" \
+AGENT_BOX_MVP_PROJECT=agent-box-mvp-run-id \
+uv run python scripts/agent_box_mvp_acceptance.py
+```
+
+The SDK revision defaults to
+`704cbe6015e3d59cabe04632175d99df2d448999`. Runtime and control-plane keys
+are read only from the environment and never appear in the JSON result.
+
 ## Configuration
 
 The server can be configured using environment variables or a JSON configuration file.
